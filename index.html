@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Приватный чат для друзей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .chat-header h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f39c12;
+            margin-left: 10px;
+        }
+        
+        .connection-status.connected {
+            background: #2ecc71;
+        }
+        
+        .messages-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f5f7fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            clear: both;
+        }
+        
+        .message.sent {
+            float: right;
+        }
+        
+        .message.received {
+            float: left;
+        }
+        
+        .message-content {
+            padding: 12px 18px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        .message.sent .message-content {
+            background: #4a90e2;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.received .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .message-info {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #666;
+        }
+        
+        .message.sent .message-info {
+            text-align: right;
+        }
+        
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .input-area input:focus {
+            border-color: #4a90e2;
+        }
+        
+        .input-area button {
+            padding: 12px 25px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .input-area button:hover {
+            background: #357abd;
+        }
+        
+        .input-area button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .users-list {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .user-badge {
+            background: #4a90e2;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .user-badge.online {
+            background: #2ecc71;
+        }
+        
+        .setup-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .setup-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .setup-modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .setup-modal input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .setup-modal button {
+            padding: 12px 30px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .setup-modal button.secondary {
+            background: #666;
+        }
+        
+        .setup-modal button:hover {
+            opacity: 0.9;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .room-info {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            color: #333;
+        }
+        
+        .copy-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="setupScreen" class="setup-screen">
+        <div class="setup-modal">
+            <h3>🔐 Приватный чат для друзей</h3>
+            
+            <div id="roomSelection">
+                <input type="text" id="roomNameInput" placeholder="Название комнаты" value="druzya">
+                <input type="password" id="roomPasswordInput" placeholder="Пароль комнаты">
+                <input type="text" id="usernameInput" placeholder="Ваше имя">
+                <button onclick="joinRoom()">🔑 Войти в комнату</button>
+                <button class="secondary" onclick="createRoom()">✨ Создать новую комнату</button>
+            </div>
+            
+            <div id="roomInfo" style="display: none;">
+                <div class="room-info" id="roomDetails"></div>
+                <button onclick="copyRoomLink()">📋 Скопировать ссылку</button>
+                <button class="secondary" onclick="showRoomSelection()">← Назад</button>
+            </div>
+            
+            <p class="info-text">Чат работает через интернет, но доступен только по паролю</p>
+        </div>
+    </div>
+
+    <div class="chat-container" style="display: none;" id="chatContainer">
+        <div class="chat-header">
+            <h2>👥 Комната: <span id="currentRoom"></span> <span id="connectionStatus" class="connection-status"></span></h2>
+            <p>Вы: <span id="currentUsername"></span></p>
+        </div>
+        
+        <div class="users-list" id="usersList">
+            <span class="user-badge online">Загрузка...</span>
+        </div>
+        
+        <div class="messages-area" id="messagesArea">
+            <!-- Сообщения будут добавляться сюда -->
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Введите сообщение..." onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button id="sendButton" onclick="sendMessage()" disabled>Отправить</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let socket;
+        let username = '';
+        let roomName = '';
+        let roomPassword = '';
+        
+        // Сервер (бесплатный на Render или Railway)
+        const SERVER_URL = 'https://private-chat-server.onrender.com'; // Замените на ваш URL
+        
+        function showRoomSelection() {
+            document.getElementById('roomSelection').style.display = 'block';
+            document.getElementById('roomInfo').style.display = 'none';
+        }
+        
+        function createRoom() {
+            const room = document.getElementById('roomNameInput').value.trim() || 'room_' + Math.random().toString(36).substring(7);
+            const password = document.getElementById('roomPasswordInput').value.trim();
+            const user = document.getElementById('usernameInput').value.trim();
+            
+            if (!user) {
+                alert('Введите имя');
+                return;
+            }
+            
+            if (!password) {
+                alert('Введите пароль комнаты');
+                return;
+            }
+            
+            username = user;
+            roomName = room;
+            roomPassword = password;
+            
+            const roomLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(room)}&password=${encodeURIComponent(password)}`;
+            
+            document.getElementById('roomSelection').style.display = 'none';
+            document.getElementById('roomInfo').style.display = 'block';
+            document.getElementById('roomDetails').innerHTML = `
+                <strong>Комната:</strong> ${room}<br>
+                <strong>Пароль:</strong> ${password}<br>
+                <strong>Ссылка:</strong><br>
+                <small>${roomLink}</small>
+            `;
+        }
+        
+        function copyRoomLink() {
+            const roomLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomName)}&password=${encodeURIComponent(roomPassword)}&username=${encodeURIComponent(username)}`;
+            navigator.clipboard.writeText(roomLink);
+            alert('Ссылка скопирована! Отправьте её друзьям.');
+        }
+        
+        function joinRoom() {
+            // Проверяем URL параметры
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlRoom = urlParams.get('room');
+            const urlPassword = urlParams.get('password');
+            const urlUsername = urlParams.get('username');
+            
+            if (urlRoom && urlPassword) {
+                roomName = urlRoom;
+                roomPassword = urlPassword;
+                username = urlUsername || prompt('Введите ваше имя:') || 'User';
+            } else {
+                roomName = document.getElementById('roomNameInput').value.trim();
+                roomPassword = document.getElementById('roomPasswordInput').value.trim();
+                username = document.getElementById('usernameInput').value.trim();
+            }
+            
+            if (!roomName || !roomPassword || !username) {
+                alert('Заполните все поля');
+                return;
+            }
+            
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('currentRoom').textContent = roomName;
+            document.getElementById('currentUsername').textContent = username;
+            
+            connectToServer();
+        }
+        
+        // Автоматическое подключение если есть параметры в URL
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('room') && urlParams.get('password')) {
+                joinRoom();
+            }
+        };
+        
+        function connectToServer() {
+            socket = io(SERVER_URL, {
+                query: {
+                    room: roomName,
+                    password: roomPassword,
+                    username: username
+                },
+                reconnectionAttempts: 5
+            });
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                document.getElementById('connectionStatus').className = 'connection-status connected';
+                document.getElementById('sendButton').disabled = false;
+                
+                socket.emit('join-room', {
+                    room: roomName,
+                    password: roomPassword,
+                    username: username
+                });
+                
+                addSystemMessage('✅ Подключено к серверу!');
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.log('Connection error:', error);
+                document.getElementById('connectionStatus').className = 'connection-status';
+                document.getElementById('sendButton').disabled = true;
+                addSystemMessage('❌ Ошибка подключения. Проверьте пароль или попробуйте позже.');
+            });
+            
+            socket.on('error', (message) => {
+                alert(message);
+                window.location.reload();
+            });
+            
+            socket.on('message', (data) => {
+                displayMessage(data, data.username === username ? 'sent' : 'received');
+            });
+            
+            socket.on('user-list', (userList) => {
+                updateUsersList(userList);
+            });
+            
+            socket.on('user-joined', (data) => {
+                addSystemMessage(`👋 ${data.username} присоединился к чату`);
+            });
+            
+            socket.on('user-left', (data) => {
+                addSystemMessage(`👋 ${data.username} покинул чат`);
+            });
+        }
+        
+        function addSystemMessage(text) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.margin = '10px 0';
+            messageDiv.style.color = '#666';
+            messageDiv.style.fontStyle = 'italic';
+            messageDiv.style.fontSize = '14px';
+            messageDiv.textContent = text;
+            messagesArea.appendChild(messageDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+        
+        function displayMessage(data, type) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const time = new Date(data.timestamp).toLocaleTimeString('ru-RU', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">${escapeHtml(data.text)}</div>
+                <div class="message-info">
+                    ${data.username} • ${time}
+                </div>
+            `;
+            
+            messagesArea.appendChild(messageDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+        
+        function updateUsersList(userList) {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+            
+            userList.forEach(user => {
+                if (user.username) {
+                    const userDiv = document.createElement('span');
+                    userDiv.className = 'user-badge online';
+                    userDiv.innerHTML = `👤 ${escapeHtml(user.username)}`;
+                    usersList.appendChild(userDiv);
+                }
+            });
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (text && socket && socket.connected) {
+                socket.emit('message', {
+                    username: username,
+                    text: text,
+                    room: roomName,
+                    timestamp: new Date().toISOString()
+                });
+                input.value = '';
+            }
+        }
+        
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
